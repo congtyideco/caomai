@@ -48,6 +48,8 @@
             border-bottom: 2px solid #bbdefb;
             font-size: 12px;
             padding: 8px 4px;
+            position: relative;
+            user-select: none;
         }
         .table td {
             padding: 6px 4px;
@@ -335,6 +337,50 @@
             border: 1px solid #dee2e6;
         }
         
+        /* Style cho cột Hạn dụng */
+        .expiry-date-input {
+            min-width: 120px;
+        }
+        .expiry-date-overdue {
+            background-color: #ffebee !important;
+            color: #c62828 !important;
+            font-weight: bold;
+        }
+        .expiry-date-close {
+            background-color: #fff3cd !important;
+            color: #f57c00 !important;
+            font-weight: bold;
+        }
+        .expiry-date-future {
+            background-color: #e8f5e9 !important;
+            color: #2e7d32 !important;
+        }
+        
+        /* Style cho tính năng kéo giãn cột */
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            height: 100%;
+            background-color: transparent;
+            cursor: col-resize;
+            z-index: 10;
+        }
+        .resize-handle:hover, .resize-handle.active {
+            background-color: #1565c0;
+        }
+        .resize-line {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background-color: #1565c0;
+            z-index: 100;
+            pointer-events: none;
+            display: none;
+        }
+        
         /* Responsive cho mobile */
         @media (max-width: 768px) {
             .table-responsive {
@@ -360,6 +406,10 @@
                 min-width: 100px;
                 font-size: 10px;
             }
+            .expiry-date-input {
+                min-width: 100px;
+                font-size: 10px;
+            }
         }
         
         @media (max-width: 576px) {
@@ -377,6 +427,9 @@
                 white-space: nowrap;
             }
             .delivery-date-input {
+                min-width: 90px;
+            }
+            .expiry-date-input {
                 min-width: 90px;
             }
         }
@@ -549,6 +602,7 @@
                                     <th width="120">SL đặt dự kiến/tháng</th>
                                     <th width="100">Trạng thái</th>
                                     <th width="120">Ngày dự kiến giao</th>
+                                    <th width="120">Hạn dụng</th>
                                     <th width="80">Thao tác</th>
                                 </tr>
                             </thead>
@@ -673,12 +727,96 @@
         let selectedMedicines = new Set();
         let isFilteringSelected = false;
         let currentDisplayData = [];
+        let isResizing = false;
+        let currentResizeColumn = null;
+        let startX = 0;
+        let startWidth = 0;
 
         // Hàm khởi tạo
         function init() {
             loadAlertConfig();
             loadMedicinesFromFirebase();
             setupEventListeners();
+            setupColumnResizing();
+        }
+
+        // Hàm thiết lập tính năng kéo giãn cột
+        function setupColumnResizing() {
+            const table = document.getElementById('medicineTable');
+            const headers = table.querySelectorAll('th');
+            const resizeLine = document.createElement('div');
+            resizeLine.className = 'resize-line';
+            document.body.appendChild(resizeLine);
+
+            headers.forEach((header, index) => {
+                // Bỏ qua cột STT và checkbox
+                if (index === 0 || index === 1) return;
+                
+                const handle = document.createElement('div');
+                handle.className = 'resize-handle';
+                header.appendChild(handle);
+                
+                handle.addEventListener('mousedown', function(e) {
+                    isResizing = true;
+                    currentResizeColumn = header;
+                    startX = e.pageX;
+                    startWidth = header.offsetWidth;
+                    
+                    // Hiển thị đường kẻ resize
+                    resizeLine.style.left = (header.offsetLeft + header.offsetWidth) + 'px';
+                    resizeLine.style.display = 'block';
+                    
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isResizing || !currentResizeColumn) return;
+                
+                const deltaX = e.pageX - startX;
+                const newWidth = Math.max(50, startWidth + deltaX); // Đảm bảo cột không quá nhỏ
+                
+                // Cập nhật đường kẻ resize
+                resizeLine.style.left = (currentResizeColumn.offsetLeft + newWidth) + 'px';
+                
+                // Cập nhật chiều rộng cột
+                currentResizeColumn.style.width = newWidth + 'px';
+                
+                // Cập nhật tất cả các ô trong cột
+                const columnIndex = Array.from(currentResizeColumn.parentNode.children).indexOf(currentResizeColumn);
+                const rows = table.querySelectorAll('tr');
+                
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td, th');
+                    if (cells[columnIndex]) {
+                        cells[columnIndex].style.width = newWidth + 'px';
+                    }
+                });
+            });
+            
+            document.addEventListener('mouseup', function() {
+                if (isResizing) {
+                    isResizing = false;
+                    currentResizeColumn = null;
+                    resizeLine.style.display = 'none';
+                }
+            });
+        }
+
+        // Hàm xác định màu sắc cho hạn dụng
+        function getExpiryDateColorClass(expiryDate) {
+            if (!expiryDate) return '';
+            
+            const today = new Date();
+            const expiry = new Date(expiryDate);
+            
+            const diffTime = expiry.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) return 'expiry-date-overdue';
+            if (diffDays <= 30) return 'expiry-date-close'; // Cảnh báo nếu còn 30 ngày hoặc ít hơn
+            return 'expiry-date-future';
         }
 
         // Hàm tải cấu hình cảnh báo từ Firebase
@@ -806,9 +944,9 @@
                 }
                 
                 // Thêm class cảnh báo nếu số lượng thấp
-                if (medicine.quantity !== undefined && medicine.quantity < lowStockThreshold && medicine.quantity > 0) {
+                if (medicine.monthlyOrder !== undefined && medicine.monthlyOrder < lowStockThreshold && medicine.monthlyOrder > 0) {
                     row.classList.add('low-stock');
-                } else if (medicine.quantity === 0) {
+                } else if (medicine.monthlyOrder === 0) {
                     row.classList.add('out-of-stock');
                 }
                 
@@ -822,7 +960,7 @@
                 switch(medicine.status) {
                     case 'available':
                         statusClass = 'status-available';
-                        statusText = 'Còn hàng';
+                        statusText = 'Còn hàng ở CM';
                         break;
                     case 'out-of-stock':
                         statusClass = 'status-out-of-stock';
@@ -834,7 +972,7 @@
                         break;
                     case 'pending':
                         statusClass = 'status-pending';
-                        statusText = 'Chưa về kho';
+                        statusText = 'Chờ CM đặt hàng';
                         break;
                 }
 
@@ -847,6 +985,9 @@
                 
                 // Xác định màu sắc cho ngày giao
                 const deliveryDateColorClass = getDeliveryDateColorClass(medicine.deliveryDate);
+                
+                // Xác định màu sắc cho hạn dụng
+                const expiryDateColorClass = getExpiryDateColorClass(medicine.expiryDate);
                 
                 row.innerHTML = `
                     <td class="checkbox-cell">
@@ -876,6 +1017,12 @@
                                data-field="deliveryDate" 
                                data-id="${medicine.id}"
                                title="${medicine.deliveryDate ? formatDisplayDate(medicine.deliveryDate) : 'Chưa có ngày giao'}">
+                    </td>
+                    <td>
+                        <input type="month" class="form-control form-control-sm expiry-date-input ${expiryDateColorClass}" 
+                               value="${medicine.expiryDate || ''}" 
+                               data-field="expiryDate" 
+                               data-id="${medicine.id}">
                     </td>
                     <td class="action-buttons">
                         <button class="btn btn-success btn-sm save-btn" data-id="${medicine.id}" title="Lưu">
@@ -956,6 +1103,22 @@
                     }
                     
                     // Tự động lưu khi thay đổi ngày giao
+                    const id = parseInt(this.getAttribute('data-id'));
+                    saveRow(id);
+                });
+            });
+            
+            // Thêm sự kiện tự động lưu khi thay đổi hạn dụng
+            document.querySelectorAll('input[data-field="expiryDate"]').forEach(input => {
+                input.addEventListener('change', function() {
+                    // Cập nhật màu sắc khi thay đổi hạn dụng
+                    this.classList.remove('expiry-date-overdue', 'expiry-date-close', 'expiry-date-future');
+                    const newColorClass = getExpiryDateColorClass(this.value);
+                    if (newColorClass) {
+                        this.classList.add(newColorClass);
+                    }
+                    
+                    // Tự động lưu khi thay đổi hạn dụng
                     const id = parseInt(this.getAttribute('data-id'));
                     saveRow(id);
                 });
@@ -1091,6 +1254,7 @@
                 monthlyOrder: 0,
                 status: "pending",
                 deliveryDate: "",
+                expiryDate: "",
                 isNew: true
             };
             
@@ -1118,7 +1282,7 @@
             
             // Kiểm tra thuốc sắp hết hàng
             const lowStockMedicines = medicines.filter(med => 
-                med.quantity !== undefined && med.quantity < lowStockThreshold && med.quantity > 0
+                med.monthlyOrder !== undefined && med.monthlyOrder < lowStockThreshold && med.monthlyOrder > 0
             );
             
             if (lowStockMedicines.length > 0) {
@@ -1133,7 +1297,7 @@
             }
             
             // Kiểm tra thuốc hết hàng
-            const outOfStockMedicines = medicines.filter(med => med.quantity === 0);
+            const outOfStockMedicines = medicines.filter(med => med.monthlyOrder === 0);
             
             if (outOfStockMedicines.length > 0) {
                 alertCount += outOfStockMedicines.length;
@@ -1159,7 +1323,7 @@
         // Hàm lọc thuốc sắp hết hàng
         function filterLowStock() {
             const filtered = medicines.filter(med => 
-                med.quantity !== undefined && med.quantity < lowStockThreshold && med.quantity > 0
+                med.monthlyOrder !== undefined && med.monthlyOrder < lowStockThreshold && med.monthlyOrder > 0
             );
             currentDisplayData = filtered;
             renderTable();
@@ -1167,7 +1331,7 @@
 
         // Hàm lọc thuốc hết hàng
         function filterOutOfStock() {
-            const filtered = medicines.filter(med => med.quantity === 0);
+            const filtered = medicines.filter(med => med.monthlyOrder === 0);
             currentDisplayData = filtered;
             renderTable();
         }
@@ -1177,10 +1341,10 @@
             const total = medicines.length;
             const available = medicines.filter(med => med.status === 'available').length;
             const lowStock = medicines.filter(med => 
-                med.quantity !== undefined && med.quantity < lowStockThreshold && med.quantity > 0
+                med.monthlyOrder !== undefined && med.monthlyOrder < lowStockThreshold && med.monthlyOrder > 0
             ).length;
             const outOfStock = medicines.filter(med => 
-                med.quantity === 0
+                med.monthlyOrder === 0
             ).length;
             
             document.getElementById('totalMedicines').textContent = total;
@@ -1284,6 +1448,7 @@
                                 monthlyOrder: 0,
                                 status: "pending",
                                 deliveryDate: "",
+                                expiryDate: "",
                                 deliveryAbility: "Có thể giao sau"
                             });
                         }
@@ -1344,7 +1509,7 @@
             
             // Chuẩn bị dữ liệu
             const data = [
-                ['Mã SP', 'Tên sản phẩm', 'SL đặt dự kiến/tháng', 'Trạng thái', 'Ngày dự kiến giao']
+                ['Mã SP', 'Tên sản phẩm', 'SL đặt dự kiến/tháng', 'Trạng thái', 'Ngày dự kiến giao', 'Hạn dụng']
             ];
             
             medicines.forEach(medicine => {
@@ -1361,7 +1526,8 @@
                     medicine.name,
                     medicine.monthlyOrder || 0,
                     statusText,
-                    medicine.deliveryDate ? formatDisplayDate(medicine.deliveryDate) : ''
+                    medicine.deliveryDate ? formatDisplayDate(medicine.deliveryDate) : '',
+                    medicine.expiryDate || ''
                 ]);
             });
             
@@ -1552,4 +1718,3 @@
     </script>
 </body>
 </html>
-
