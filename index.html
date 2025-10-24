@@ -83,6 +83,14 @@
             font-size: 12px;
             color: white;
         }
+        .btn-info {
+            background-color: #17a2b8;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-size: 12px;
+            color: white;
+        }
         .btn-sm {
             padding: 4px 8px;
             font-size: 11px;
@@ -395,8 +403,8 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h1 class="h4 mb-1"><i class="fas fa-pills me-2"></i>CÙNG QUẢN LÝ DANH MỤC THUỐC IDECO -CAO MAI </h1>
-                    <p class="mb-0 small">Việc cùng nhau cập nhật thường xuyên giúp 2 DN chúng ta có Doanh thu tốt hơn</p>
+                    <h1 class="h4 mb-1"><i class="fas fa-pills me-2"></i>Quản Lý Danh Mục Thuốc</h1>
+                    <p class="mb-0 small">Hệ thống quản lý thông minh - Mobile Friendly</p>
                 </div>
                 <div class="col-md-4 text-end">
                     <div class="btn-group">
@@ -461,7 +469,7 @@
                                 
                                 <!-- Phần import sản lượng -->
                                 <div class="import-section">
-                                    <h6 class="mb-1"><i class="fas fa-chart-line me-1"></i>Nhập sản lượng dự kiến bán</h6>
+                                    <h6 class="mb-1"><i class="fas fa-chart-line me-1"></i>Nhập sản lượng dự kiến</h6>
                                     <div class="file-upload mb-1" id="quantityFileUpload">
                                         <i class="fas fa-file-excel fa-lg mb-1 text-success"></i>
                                         <p class="mb-0 small">File Excel sản lượng cuối kỳ</p>
@@ -586,7 +594,28 @@
         </div>
     </div>
 
-   
+    <!-- Modal cấu hình cảnh báo -->
+    <div class="modal fade" id="alertConfigModal" tabindex="-1" aria-labelledby="alertConfigModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title" id="alertConfigModalLabel">Cấu hình cảnh báo</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-2">
+                    <div class="mb-2">
+                        <label for="lowStockThreshold" class="form-label small">Ngưỡng cảnh báo sắp hết hàng</label>
+                        <input type="number" class="form-control form-control-sm" id="lowStockThreshold" value="10" min="1">
+                        <div class="form-text small">Số lượng tồn kho dưới ngưỡng này sẽ được cảnh báo sắp hết hàng</div>
+                    </div>
+                </div>
+                <div class="modal-footer py-1">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="saveAlertConfig">Lưu cấu hình</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal xác nhận xóa toàn bộ -->
     <div class="modal fade" id="deleteAllModal" tabindex="-1" aria-labelledby="deleteAllModalLabel" aria-hidden="true">
@@ -643,6 +672,7 @@
         let quantityData = [];
         let selectedMedicines = new Set();
         let isFilteringSelected = false;
+        let currentDisplayData = [];
 
         // Hàm khởi tạo
         function init() {
@@ -689,6 +719,7 @@
                     medicines = [];
                     nextId = 1;
                 }
+                currentDisplayData = medicines;
                 renderTable();
                 updateDashboardStats();
                 checkAlerts();
@@ -761,11 +792,12 @@
         }
 
         // Hàm hiển thị dữ liệu
-        function renderTable(data = medicines) {
+        function renderTable(data = null) {
+            const displayData = data || currentDisplayData;
             const tableBody = document.getElementById('medicineTableBody');
             tableBody.innerHTML = '';
             
-            data.forEach((medicine, index) => {
+            displayData.forEach((medicine, index) => {
                 const isSelected = selectedMedicines.has(medicine.id);
                 const row = document.createElement('tr');
                 
@@ -857,13 +889,31 @@
                 tableBody.appendChild(row);
             });
             
-            document.getElementById('rowCount').textContent = `Hiển thị ${data.length} mục`;
-            addEventListeners();
+            document.getElementById('rowCount').textContent = `Hiển thị ${displayData.length} mục`;
+            addRowEventListeners();
             updateMainCheckbox();
         }
 
-        // Hàm thêm sự kiện
-        function addEventListeners() {
+        // Hàm thêm sự kiện cho các hàng
+        function addRowEventListeners() {
+            // Sự kiện cho checkbox từng dòng
+            document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    const row = this.closest('tr');
+                    
+                    if (this.checked) {
+                        selectedMedicines.add(id);
+                        row.classList.add('selected-row');
+                    } else {
+                        selectedMedicines.delete(id);
+                        row.classList.remove('selected-row');
+                    }
+                    updateSelectedCount();
+                    updateMainCheckbox();
+                });
+            });
+
             document.querySelectorAll('.save-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     const id = parseInt(this.getAttribute('data-id'));
@@ -910,34 +960,18 @@
                     saveRow(id);
                 });
             });
-
-            // Thêm sự kiện cho checkbox từng dòng
-            document.querySelectorAll('.row-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    const row = this.closest('tr');
-                    
-                    if (this.checked) {
-                        selectedMedicines.add(id);
-                        row.classList.add('selected-row');
-                    } else {
-                        selectedMedicines.delete(id);
-                        row.classList.remove('selected-row');
-                    }
-                    updateSelectedCount();
-                    updateMainCheckbox();
-                });
-            });
         }
 
         // Hàm cập nhật checkbox chọn tất cả
         function updateMainCheckbox() {
             const mainCheckbox = document.getElementById('mainCheckbox');
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
             const allCheckboxes = document.querySelectorAll('.row-checkbox');
             
             if (allCheckboxes.length === 0) {
                 mainCheckbox.checked = false;
                 mainCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
                 return;
             }
             
@@ -946,12 +980,15 @@
             if (checkedCount === 0) {
                 mainCheckbox.checked = false;
                 mainCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
             } else if (checkedCount === allCheckboxes.length) {
                 mainCheckbox.checked = true;
                 mainCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
             } else {
                 mainCheckbox.checked = false;
                 mainCheckbox.indeterminate = true;
+                selectAllCheckbox.checked = false;
             }
         }
 
@@ -964,23 +1001,21 @@
         function toggleSelectAll() {
             const mainCheckbox = document.getElementById('mainCheckbox');
             const allCheckboxes = document.querySelectorAll('.row-checkbox');
-            const currentData = isFilteringSelected ? 
-                medicines.filter(med => selectedMedicines.has(med.id)) : 
-                medicines;
+            const currentData = isFilteringSelected ? currentDisplayData : medicines;
             
-            if (mainCheckbox.checked || mainCheckbox.indeterminate) {
-                // Chọn tất cả
+            if (mainCheckbox.checked) {
+                // Chọn tất cả các hàng đang hiển thị
                 currentData.forEach(med => {
                     selectedMedicines.add(med.id);
                 });
             } else {
-                // Bỏ chọn tất cả
+                // Bỏ chọn tất cả các hàng đang hiển thị
                 currentData.forEach(med => {
                     selectedMedicines.delete(med.id);
                 });
             }
             
-            renderTable(currentData);
+            renderTable();
             updateSelectedCount();
         }
 
@@ -992,14 +1027,15 @@
             }
             
             isFilteringSelected = true;
-            const filtered = medicines.filter(med => selectedMedicines.has(med.id));
-            renderTable(filtered);
-            showMessage(`Đang hiển thị ${filtered.length} sản phẩm đã chọn`);
+            currentDisplayData = medicines.filter(med => selectedMedicines.has(med.id));
+            renderTable(currentDisplayData);
+            showMessage(`Đang hiển thị ${currentDisplayData.length} sản phẩm đã chọn`);
         }
 
         // Hàm làm mới dữ liệu
         function refreshData() {
             isFilteringSelected = false;
+            currentDisplayData = medicines;
             renderTable();
             showMessage('Đã làm mới dữ liệu');
         }
@@ -1038,6 +1074,7 @@
             if (confirm('Bạn có chắc chắn muốn xóa thuốc này không?')) {
                 medicines = medicines.filter(med => med.id !== id);
                 selectedMedicines.delete(id);
+                currentDisplayData = currentDisplayData.filter(med => med.id !== id);
                 saveMedicinesToFirebase();
                 showMessage('Đã xóa thuốc thành công!');
             }
@@ -1058,6 +1095,7 @@
             };
             
             medicines.unshift(newMedicine);
+            currentDisplayData = medicines;
             renderTable();
             showMessage('Đã thêm hàng mới. Vui lòng nhập thông tin và lưu.');
         }
@@ -1123,13 +1161,15 @@
             const filtered = medicines.filter(med => 
                 med.quantity !== undefined && med.quantity < lowStockThreshold && med.quantity > 0
             );
-            renderTable(filtered);
+            currentDisplayData = filtered;
+            renderTable();
         }
 
         // Hàm lọc thuốc hết hàng
         function filterOutOfStock() {
             const filtered = medicines.filter(med => med.quantity === 0);
-            renderTable(filtered);
+            currentDisplayData = filtered;
+            renderTable();
         }
 
         // Hàm cập nhật thống kê
@@ -1149,7 +1189,7 @@
             document.getElementById('outOfStockMedicines').textContent = outOfStock;
         }
 
-        // Hàm xử lý file Excel - ĐÃ SỬA LỖI ĐỂ ĐỌC ĐÚNG ĐỊNH DẠNG FILE CỦA BẠN
+        // Hàm xử lý file Excel
         function handleExcelFile(file, isQuantityFile = false) {
             const reader = new FileReader();
             
@@ -1211,27 +1251,27 @@
             showMessage(`Đã tải ${quantityData.length} mã sản phẩm từ file sản lượng`);
         }
 
-        // Hàm xử lý dữ liệu thuốc từ Excel - ĐÃ SỬA ĐỂ ĐỌC ĐÚNG ĐỊNH DẠNG FILE CỦA BẠN
+        // Hàm xử lý dữ liệu thuốc từ Excel
         function processMedicineData(data) {
             const newMedicines = [];
             
-            console.log('Dữ liệu file Excel:', data); // Debug log
+            console.log('Dữ liệu file Excel:', data);
             
             // Bỏ qua hàng tiêu đề (nếu có) - file của bạn có header ở hàng đầu
-            const startRow = 1; // Bắt đầu từ hàng thứ 2 (index 1) vì hàng đầu là header
+            const startRow = 1;
             
             for (let i = startRow; i < data.length; i++) {
                 const row = data[i];
-                console.log(`Hàng ${i}:`, row); // Debug log
+                console.log(`Hàng ${i}:`, row);
                 
                 if (row && row.length >= 3) {
                     // File của bạn có: Cột A (index 0): STT, Cột B (index 1): Mã SP, Cột C (index 2): Tên sản phẩm
                     const code = row[1] ? row[1].toString().trim() : '';
                     const name = row[2] ? row[2].toString().trim() : '';
                     
-                    console.log(`Mã: "${code}", Tên: "${name}"`); // Debug log
+                    console.log(`Mã: "${code}", Tên: "${name}"`);
                     
-                    if (code && name && code !== 'Tổng') { // Loại bỏ hàng tổng
+                    if (code && name && code !== 'Tổng') {
                         // Kiểm tra xem mã đã tồn tại chưa
                         const exists = medicines.some(med => med.code === code);
                         if (!exists) {
@@ -1251,11 +1291,12 @@
                 }
             }
             
-            console.log('Số thuốc mới:', newMedicines.length); // Debug log
+            console.log('Số thuốc mới:', newMedicines.length);
             
             if (newMedicines.length > 0) {
                 // Thêm thuốc mới vào đầu danh sách
                 medicines = [...newMedicines, ...medicines];
+                currentDisplayData = medicines;
                 saveMedicinesToFirebase();
                 showMessage(`Đã nhập ${newMedicines.length} thuốc mới từ file Excel`);
             } else {
@@ -1288,6 +1329,7 @@
             
             // Cập nhật danh sách chính
             medicines = sortedMedicines;
+            currentDisplayData = medicines;
             
             // Lưu lên Firebase
             saveMedicinesToFirebase();
@@ -1356,6 +1398,7 @@
                     nextId = 1;
                     selectedMedicines.clear();
                     isFilteringSelected = false;
+                    currentDisplayData = [];
                     
                     // Cập nhật giao diện
                     renderTable();
@@ -1469,8 +1512,10 @@
                         med.code.toLowerCase().includes(searchTerm) || 
                         med.name.toLowerCase().includes(searchTerm)
                     );
-                    renderTable(filteredMedicines);
+                    currentDisplayData = filteredMedicines;
+                    renderTable();
                 } else {
+                    currentDisplayData = medicines;
                     renderTable();
                 }
             });
