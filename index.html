@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Danh Mục Thuốc - Hệ Thống Thông Minh</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --secondary-color: #0d47a1;
+            --success-color: #43a047;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --light-bg: #f8f9fa;
+        }
+        
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 15px;
+        }
+        .table-container {
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .table th {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border-bottom: 2px solid #bbdefb;
+            font-size: 12px;
+            padding: 8px 4px;
+        }
+        .table td {
+            padding: 6px 4px;
+            font-size: 12px;
+            vertical-align: middle;
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        .btn-success {
+            background-color: var(--success-color);
+            border: none;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+        .status-available {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+        .status-out-of-stock {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+        .status-discontinued {
+            color: var(--warning-color);
+            font-weight: bold;
+        }
+        .status-pending {
+            color: #9e9e9e;
+            font-weight: bold;
+        }
+        .form-control, .form-select {
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            font-size: 12px;
+            padding: 4px 6px;
+        }
+        /* Màu sắc cho sản lượng */
+        .quantity-high {
+            color: #d32f2f !important;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .quantity-medium {
+            color: #1976d2 !important;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .quantity-low {
+            color: #7b1fa2 !important;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .quantity-very-low {
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .status-dropdown {
+            min-width: 120px;
+        }
+        .file-upload {
+            background-color: #e3f2fd;
+            border: 2px dashed #90caf9;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        .file-upload:hover {
+            background-color: #bbdefb;
+        }
+        .action-buttons {
+            white-space: nowrap;
+        }
+        .new-row {
+            background-color: #e8f5e9;
+        }
+        .footer {
+            margin-top: 20px;
+            padding: 15px 0;
+            background-color: #e3f2fd;
+            text-align: center;
+            color: #546e7a;
+            font-size: 12px;
+        }
+        .alert-section {
+            margin-bottom: 15px;
+        }
+        .alert-item {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+            border-left: 4px solid var(--warning-color);
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            border-left: 4px solid var(--danger-color);
+        }
+        .alert-info {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+        }
+        .low-stock {
+            background-color: #fff3cd !important;
+        }
+        .out-of-stock {
+            background-color: #f8d7da !important;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .notification-icon {
+            position: relative;
+        }
+        .dashboard-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: calc(50% - 8px);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-card.total {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+        }
+        .stat-card.available {
+            background: linear-gradient(135deg, #2196F3, #0D47A1);
+        }
+        .stat-card.low-stock {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+        }
+        .stat-card.out-of-stock {
+            background: linear-gradient(135deg, #F44336, #C62828);
+        }
+        .stat-card h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        .stat-card p {
+            margin: 3px 0 0;
+            font-size: 11px;
+        }
+        .import-section {
+            background-color: #e8f5e9;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+        .btn-group-vertical {
+            width: 100%;
+        }
+        .btn-group-vertical .btn {
+            margin-bottom: 4px;
+            text-align: left;
+            font-size: 11px;
+            padding: 6px 8px;
+        }
+        
+        /* Responsive cho mobile */
+        @media (max-width: 768px) {
+            .table-responsive {
+                font-size: 11px;
+            }
+            .table th, .table td {
+                padding: 4px 2px;
+            }
+            .btn {
+                font-size: 11px;
+                padding: 4px 6px;
+            }
+            .card-body {
+                padding: 10px;
+            }
+            .header h1 {
+                font-size: 18px;
+            }
+            .header p {
+                font-size: 12px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .dashboard-stats {
+                flex-direction: column;
+            }
+            .stat-card {
+                min-width: 100%;
+            }
+            .table td:nth-child(2),
+            .table th:nth-child(2) {
+                max-width: 80px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+        
+        /* Compact mode cho bảng */
+        .compact-table {
+            font-size: 11px;
+        }
+        .compact-table .form-control,
+        .compact-table .form-select {
+            font-size: 11px;
+            padding: 2px 4px;
+            height: 28px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header mb-3">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="h4 mb-1"><i class="fas fa-pills me-2"></i>Quản Lý Danh Mục Thuốc</h1>
+                    <p class="mb-0 small">Hệ thống quản lý thông minh - Mobile Friendly</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        <button class="btn btn-light btn-sm" id="exportBtn">
+                            <i class="fas fa-file-export me-1"></i> Xuất Excel
+                        </button>
+                        <button class="btn btn-light btn-sm notification-icon" id="alertBtn">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge d-none" id="alertCount">0</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Thống kê tổng quan -->
+        <div class="dashboard-stats">
+            <div class="stat-card total">
+                <h3 id="totalMedicines">0</h3>
+                <p>Tổng số thuốc</p>
+            </div>
+            <div class="stat-card available">
+                <h3 id="availableMedicines">0</h3>
+                <p>Còn hàng</p>
+            </div>
+            <div class="stat-card low-stock">
+                <h3 id="lowStockMedicines">0</h3>
+                <p>Sắp hết hàng</p>
+            </div>
+            <div class="stat-card out-of-stock">
+                <h3 id="outOfStockMedicines">0</h3>
+                <p>Hết hàng</p>
+            </div>
+        </div>
+
+        <!-- Khu vực cảnh báo -->
+        <div class="alert-section" id="alertSection">
+            <h5 class="mb-2"><i class="fas fa-exclamation-triangle me-2"></i>Cảnh báo thông minh</h5>
+            <div id="alertContainer">
+                <!-- Các cảnh báo sẽ được hiển thị ở đây -->
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body p-2">
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <h6 class="card-title mb-1"><i class="fas fa-file-import me-1"></i>Nhập dữ liệu</h6>
+                                <div class="file-upload mb-2" id="fileUpload">
+                                    <i class="fas fa-cloud-upload-alt fa-lg mb-1 text-primary"></i>
+                                    <p class="mb-0 small">File Excel danh mục thuốc</p>
+                                    <input type="file" id="excelFile" accept=".xlsx, .xls" class="d-none">
+                                </div>
+                                <div id="fileInfo" class="text-muted small"></div>
+                                
+                                <!-- Phần import sản lượng -->
+                                <div class="import-section">
+                                    <h6 class="mb-1"><i class="fas fa-chart-line me-1"></i>Nhập sản lượng dự kiến</h6>
+                                    <div class="file-upload mb-1" id="quantityFileUpload">
+                                        <i class="fas fa-file-excel fa-lg mb-1 text-success"></i>
+                                        <p class="mb-0 small">File Excel sản lượng cuối kỳ</p>
+                                        <input type="file" id="quantityExcelFile" accept=".xlsx, .xls" class="d-none">
+                                    </div>
+                                    <div class="btn-group-vertical">
+                                        <button class="btn btn-outline-primary btn-sm" id="loadQuantity2Btn">
+                                            <i class="fas fa-calculator me-1"></i> SL MUA 2 (Sản lượng/2)
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm" id="loadQuantity3Btn">
+                                            <i class="fas fa-calculator me-1"></i> SL MUA 3 (Sản lượng/3)
+                                        </button>
+                                    </div>
+                                    <div id="quantityFileInfo" class="text-muted small mt-1"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="card-title mb-1"><i class="fas fa-search me-1"></i>Tìm kiếm & Thao tác</h6>
+                                <div class="input-group input-group-sm mb-2">
+                                    <input type="text" class="form-control" placeholder="Tìm theo tên hoặc mã..." id="searchInput">
+                                    <button class="btn btn-outline-secondary" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-success btn-sm flex-fill" id="addRowBtn">
+                                        <i class="fas fa-plus me-1"></i> Thêm mới
+                                    </button>
+                                    <button class="btn btn-primary btn-sm flex-fill" id="saveAllBtn">
+                                        <i class="fas fa-save me-1"></i> Lưu tất cả
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table class="table table-hover compact-table" id="medicineTable">
+                            <thead>
+                                <tr>
+                                    <th width="40">STT</th>
+                                    <th width="100">Mã SP</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th width="120">SL đặt dự kiến/tháng</th>
+                                    <th width="100">Trạng thái</th>
+                                    <th width="100">Khả năng giao</th>
+                                    <th width="80">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="medicineTableBody">
+                                <!-- Dữ liệu sẽ được thêm vào đây -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between mt-2 align-items-center">
+                    <div class="text-muted small" id="rowCount">Hiển thị 0 mục</div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0" id="pagination">
+                            <!-- Phân trang sẽ được thêm vào đây -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer mt-3">
+        <div class="container">
+            <p class="mb-0">© 2023 Hệ thống Quản lý Danh mục Thuốc Thông Minh</p>
+        </div>
+    </div>
+
+    <!-- Modal thông báo -->
+    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title" id="messageModalLabel">Thông báo</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-2" id="messageModalBody">
+                    <!-- Nội dung thông báo -->
+                </div>
+                <div class="modal-footer py-1">
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal cấu hình cảnh báo -->
+    <div class="modal fade" id="alertConfigModal" tabindex="-1" aria-labelledby="alertConfigModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title" id="alertConfigModalLabel">Cấu hình cảnh báo</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-2">
+                    <div class="mb-2">
+                        <label for="lowStockThreshold" class="form-label small">Ngưỡng cảnh báo sắp hết hàng</label>
+                        <input type="number" class="form-control form-control-sm" id="lowStockThreshold" value="10" min="1">
+                        <div class="form-text small">Số lượng tồn kho dưới ngưỡng này sẽ được cảnh báo sắp hết hàng</div>
+                    </div>
+                </div>
+                <div class="modal-footer py-1">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="saveAlertConfig">Lưu cấu hình</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD4g_O1TwLYo49-yazwtro75G6GDpF2bR8",
+            authDomain: "dlthuoc.firebaseapp.com",
+            projectId: "dlthuoc",
+            storageBucket: "dlthuoc.firebasestorage.app",
+            messagingSenderId: "814425739687",
+            appId: "1:814425739687:web:aaca9d2c54f5cf2034a682",
+            measurementId: "G-PTCMG6PZ4Q"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Biến toàn cục
+        let medicines = [];
+        let nextId = 1;
+        let lowStockThreshold = 10;
+        let quantityData = [];
+
+        // Hàm khởi tạo
+        function init() {
+            loadAlertConfig();
+            loadMedicinesFromFirebase();
+            setupEventListeners();
+        }
+
+        // Hàm tải cấu hình cảnh báo từ Firebase
+        function loadAlertConfig() {
+            database.ref('alertConfig').on('value', (snapshot) => {
+                const config = snapshot.val();
+                if (config && config.lowStockThreshold) {
+                    lowStockThreshold = config.lowStockThreshold;
+                    document.getElementById('lowStockThreshold').value = lowStockThreshold;
+                }
+            });
+        }
+
+        // Hàm lưu cấu hình cảnh báo lên Firebase
+        function saveAlertConfig() {
+            const newThreshold = parseInt(document.getElementById('lowStockThreshold').value);
+            if (newThreshold && newThreshold > 0) {
+                lowStockThreshold = newThreshold;
+                database.ref('alertConfig').set({
+                    lowStockThreshold: lowStockThreshold
+                }).then(() => {
+                    showMessage('Đã lưu cấu hình cảnh báo thành công!');
+                    checkAlerts();
+                }).catch((error) => {
+                    showMessage('Lỗi khi lưu cấu hình: ' + error.message);
+                });
+            }
+        }
+
+        // Hàm tải dữ liệu từ Firebase
+        function loadMedicinesFromFirebase() {
+            database.ref('medicines').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    medicines = Object.values(data);
+                    nextId = Math.max(...medicines.map(m => m.id)) + 1;
+                } else {
+                    medicines = [];
+                    nextId = 1;
+                }
+                renderTable();
+                updateDashboardStats();
+                checkAlerts();
+            });
+        }
+
+        // Hàm lưu dữ liệu lên Firebase
+        function saveMedicinesToFirebase() {
+            const medicinesObj = {};
+            medicines.forEach(medicine => {
+                medicinesObj[medicine.id] = medicine;
+            });
+            
+            database.ref('medicines').set(medicinesObj)
+                .then(() => {
+                    console.log('Dữ liệu đã được lưu lên Firebase');
+                })
+                .catch((error) => {
+                    console.error('Lỗi khi lưu dữ liệu: ', error);
+                    showMessage('Lỗi khi lưu dữ liệu: ' + error.message);
+                });
+        }
+
+        // Hàm xác định màu sắc cho sản lượng
+        function getQuantityColorClass(quantity) {
+            if (quantity > 300) return 'quantity-high';
+            if (quantity >= 100) return 'quantity-medium';
+            if (quantity >= 50) return 'quantity-low';
+            return 'quantity-very-low';
+        }
+
+        // Hàm hiển thị dữ liệu
+        function renderTable(data = medicines) {
+            const tableBody = document.getElementById('medicineTableBody');
+            tableBody.innerHTML = '';
+            
+            data.forEach((medicine, index) => {
+                const row = document.createElement('tr');
+                
+                // Thêm class cảnh báo nếu số lượng thấp
+                if (medicine.quantity !== undefined && medicine.quantity < lowStockThreshold && medicine.quantity > 0) {
+                    row.classList.add('low-stock');
+                } else if (medicine.quantity === 0) {
+                    row.classList.add('out-of-stock');
+                }
+                
+                if (medicine.isNew) {
+                    row.classList.add('new-row');
+                }
+                
+                // Xác định class cho trạng thái
+                let statusClass = '';
+                let statusText = '';
+                switch(medicine.status) {
+                    case 'available':
+                        statusClass = 'status-available';
+                        statusText = 'Còn hàng';
+                        break;
+                    case 'out-of-stock':
+                        statusClass = 'status-out-of-stock';
+                        statusText = 'Hết hàng';
+                        break;
+                    case 'discontinued':
+                        statusClass = 'status-discontinued';
+                        statusText = 'Đứt hàng';
+                        break;
+                    case 'pending':
+                        statusClass = 'status-pending';
+                        statusText = 'Chưa về kho';
+                        break;
+                }
+
+                // Xác định màu sắc cho sản lượng
+                const monthlyOrder = medicine.monthlyOrder || 0;
+                const quantityColorClass = getQuantityColorClass(monthlyOrder);
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="${medicine.code || ''}" data-field="code" data-id="${medicine.id}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="${medicine.name || ''}" data-field="name" data-id="${medicine.id}">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm ${quantityColorClass}" value="${monthlyOrder}" data-field="monthlyOrder" data-id="${medicine.id}" min="0" readonly>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm status-dropdown ${statusClass}" data-field="status" data-id="${medicine.id}">
+                            <option value="available" ${medicine.status === 'available' ? 'selected' : ''}>Còn hàng</option>
+                            <option value="out-of-stock" ${medicine.status === 'out-of-stock' ? 'selected' : ''}>Hết hàng</option>
+                            <option value="discontinued" ${medicine.status === 'discontinued' ? 'selected' : ''}>Đứt hàng</option>
+                            <option value="pending" ${medicine.status === 'pending' ? 'selected' : ''}>Chưa về kho</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" data-field="deliveryAbility" data-id="${medicine.id}">
+                            <option value="Có thể giao" ${medicine.deliveryAbility === 'Có thể giao' ? 'selected' : ''}>Có thể giao</option>
+                            <option value="Có thể giao sau" ${medicine.deliveryAbility === 'Có thể giao sau' ? 'selected' : ''}>Có thể giao sau</option>
+                            <option value="Không thể giao" ${medicine.deliveryAbility === 'Không thể giao' ? 'selected' : ''}>Không thể giao</option>
+                        </select>
+                    </td>
+                    <td class="action-buttons">
+                        <button class="btn btn-success btn-sm save-btn" data-id="${medicine.id}" title="Lưu">
+                            <i class="fas fa-save"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm delete-btn" data-id="${medicine.id}" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            document.getElementById('rowCount').textContent = `Hiển thị ${data.length} mục`;
+            addEventListeners();
+        }
+
+        // Các hàm còn lại giữ nguyên (addEventListeners, saveRow, deleteRow, addNewRow, showMessage, checkAlerts, updateDashboardStats, exportToExcel, importFromExcel, importQuantityFromExcel, applyMonthlyOrder, setupEventListeners)
+
+        // Hàm thêm sự kiện
+        function addEventListeners() {
+            document.querySelectorAll('.save-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    saveRow(id);
+                });
+            });
+            
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    deleteRow(id);
+                });
+            });
+            
+            document.querySelectorAll('select[data-field="status"]').forEach(select => {
+                select.addEventListener('change', function() {
+                    this.classList.remove('status-available', 'status-out-of-stock', 'status-discontinued', 'status-pending');
+                    switch(this.value) {
+                        case 'available': this.classList.add('status-available'); break;
+                        case 'out-of-stock': this.classList.add('status-out-of-stock'); break;
+                        case 'discontinued': this.classList.add('status-discontinued'); break;
+                        case 'pending': this.classList.add('status-pending'); break;
+                    }
+                });
+            });
+        }
+
+        // Hàm lưu một hàng
+        function saveRow(id) {
+            const rowData = {};
+            const inputs = document.querySelectorAll(`[data-id="${id}"]`);
+            
+            inputs.forEach(input => {
+                const field = input.getAttribute('data-field');
+                let value = input.value;
+                
+                if (field === 'price' || field === 'quantity' || field === 'monthlyOrder') {
+                    value = parseInt(value) || 0;
+                }
+                
+                rowData[field] = value;
+            });
+            
+            const index = medicines.findIndex(med => med.id === id);
+            if (index !== -1) {
+                medicines[index] = { ...medicines[index], ...rowData };
+                
+                if (medicines[index].isNew) {
+                    delete medicines[index].isNew;
+                }
+                
+                saveMedicinesToFirebase();
+                showMessage('Đã lưu thông tin thuốc thành công!');
+            }
+        }
+
+        // Hàm xóa một hàng
+        function deleteRow(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa thuốc này không?')) {
+                medicines = medicines.filter(med => med.id !== id);
+                saveMedicinesToFirebase();
+                showMessage('Đã xóa thuốc thành công!');
+            }
+        }
+
+        // Hàm thêm hàng mới
+        function addNewRow() {
+            const newMedicine = {
+                id: nextId++,
+                code: "",
+                name: "",
+                price: 0,
+                quantity: 0,
+                monthlyOrder: 0,
+                status: "pending",
+                deliveryAbility: "Có thể giao sau",
+                deliveryTime: "3-5 ngày",
+                isNew: true
+            };
+            
+            medicines.unshift(newMedicine);
+            renderTable();
+            showMessage('Đã thêm hàng mới. Vui lòng nhập thông tin và lưu.');
+        }
+
+        // Hàm hiển thị thông báo
+        function showMessage(message) {
+            const modalBody = document.getElementById('messageModalBody');
+            modalBody.textContent = message;
+            
+            const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+            modal.show();
+        }
+
+        // Hàm kiểm tra và hiển thị cảnh báo
+        function checkAlerts() {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = '';
+            
+            let alertCount = 0;
+            const lowStockItems = medicines.filter(med => 
+                med.quantity !== undefined && med.quantity < lowStockThreshold && med.quantity > 0
+            );
+            
+            const outOfStockItems = medicines.filter(med => 
+                med.quantity === 0
+            );
+            
+            if (lowStockItems.length > 0) {
+                alertCount += lowStockItems.length;
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert-item alert-warning';
+                alertDiv.innerHTML = `
+                    <div>
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Cảnh báo:</strong> Có ${lowStockItems.length} thuốc sắp hết hàng
+                    </div>
+                    <button class="btn btn-sm btn-outline-warning" id="viewLowStockBtn">Xem</button>
+                `;
+                alertContainer.appendChild(alertDiv);
+                
+                document.getElementById('viewLowStockBtn').addEventListener('click', function() {
+                    renderTable(lowStockItems);
+                });
+            }
+            
+            if (outOfStockItems.length > 0) {
+                alertCount += outOfStockItems.length;
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert-item alert-danger';
+                alertDiv.innerHTML = `
+                    <div>
+                        <i class="fas fa-times-circle me-2"></i>
+                        <strong>Cảnh báo:</strong> Có ${outOfStockItems.length} thuốc đã hết hàng
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" id="viewOutOfStockBtn">Xem</button>
+                `;
+                alertContainer.appendChild(alertDiv);
+                
+                document.getElementById('viewOutOfStockBtn').addEventListener('click', function() {
+                    renderTable(outOfStockItems);
+                });
+            }
+            
+            if (alertCount === 0) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert-item alert-info';
+                alertDiv.innerHTML = `
+                    <div>
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Thông tin:</strong> Không có cảnh báo nào
+                    </div>
+                `;
+                alertContainer.appendChild(alertDiv);
+            }
+            
+            const alertBadge = document.getElementById('alertCount');
+            if (alertCount > 0) {
+                alertBadge.textContent = alertCount;
+                alertBadge.classList.remove('d-none');
+            } else {
+                alertBadge.classList.add('d-none');
+            }
+        }
+
+        // Hàm cập nhật thống kê tổng quan
+        function updateDashboardStats() {
+            const total = medicines.length;
+            const available = medicines.filter(med => med.status === 'available').length;
+            const lowStock = medicines.filter(med => 
+                med.quantity !== undefined && med.quantity < lowStockThreshold && med.quantity > 0
+            ).length;
+            const outOfStock = medicines.filter(med => 
+                med.quantity === 0 || med.status === 'out-of-stock'
+            ).length;
+            
+            document.getElementById('totalMedicines').textContent = total;
+            document.getElementById('availableMedicines').textContent = available;
+            document.getElementById('lowStockMedicines').textContent = lowStock;
+            document.getElementById('outOfStockMedicines').textContent = outOfStock;
+        }
+
+        // Hàm xuất dữ liệu ra Excel
+        function exportToExcel() {
+            const exportData = medicines.map(med => {
+                let statusText = '';
+                switch(med.status) {
+                    case 'available': statusText = 'Còn hàng'; break;
+                    case 'out-of-stock': statusText = 'Hết hàng'; break;
+                    case 'discontinued': statusText = 'Đứt hàng'; break;
+                    case 'pending': statusText = 'Chưa về kho'; break;
+                }
+                
+                return {
+                    'STT': medicines.indexOf(med) + 1,
+                    'Mã SP': med.code,
+                    'Tên sản phẩm': med.name,
+                    'SL đặt dự kiến/tháng': med.monthlyOrder || 0,
+                    'Trạng thái': statusText,
+                    'Khả năng giao': med.deliveryAbility
+                };
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Danh mục thuốc');
+            XLSX.writeFile(wb, 'danh_muc_thuoc.xlsx');
+            showMessage('Đã xuất dữ liệu ra file Excel thành công!');
+        }
+
+        // Hàm nhập dữ liệu từ Excel
+        function importFromExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+                
+                document.getElementById('fileInfo').textContent = `Đã chọn file: ${file.name} (${jsonData.length} dòng)`;
+                
+                if (jsonData.length > 0) {
+                    const importedMedicines = [];
+                    
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        
+                        if (row && row.length >= 3) {
+                            const code = row[1] || '';
+                            const name = row[2] || '';
+                            
+                            if (!code && !name) continue;
+                            if (code === 'Mã SP' || name === 'Sản phẩm') continue;
+                            if (code === '' && name === '') continue;
+                            
+                            importedMedicines.push({
+                                id: nextId + importedMedicines.length,
+                                code: code.toString().trim(),
+                                name: name.toString().trim(),
+                                price: 0,
+                                quantity: 0,
+                                monthlyOrder: 0,
+                                status: "pending",
+                                deliveryAbility: "Có thể giao sau",
+                                deliveryTime: "3-5 ngày"
+                            });
+                        }
+                    }
+                    
+                    if (importedMedicines.length > 0) {
+                        medicines = [...importedMedicines];
+                        nextId = Math.max(...medicines.map(m => m.id)) + 1;
+                        saveMedicinesToFirebase();
+                        showMessage(`Đã nhập ${importedMedicines.length} thuốc từ file Excel thành công!`);
+                        renderTable();
+                    } else {
+                        showMessage('Không tìm thấy dữ liệu hợp lệ trong file Excel.');
+                    }
+                } else {
+                    showMessage('File Excel không có dữ liệu.');
+                }
+            };
+            
+            reader.onerror = function() {
+                showMessage('Lỗi khi đọc file Excel.');
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Hàm import sản lượng từ Excel
+        function importQuantityFromExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+                    
+                    quantityData = [];
+                    
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (row && row.length >= 4) {
+                            const code = row[1] || '';
+                            const name = row[2] || '';
+                            const endQuantity = parseFloat(row[3]) || 0;
+                            
+                            if (code && name) {
+                                quantityData.push({
+                                    code: code.toString().trim(),
+                                    name: name.toString().trim(),
+                                    endQuantity: endQuantity
+                                });
+                            }
+                        }
+                    }
+                    
+                    document.getElementById('quantityFileInfo').textContent = 
+                        `Đã load ${quantityData.length} sản phẩm từ file sản lượng`;
+                    showMessage(`Đã load dữ liệu sản lượng từ ${quantityData.length} sản phẩm`);
+                    
+                } catch (error) {
+                    console.error('Lỗi khi đọc file sản lượng:', error);
+                    showMessage('Lỗi khi đọc file sản lượng: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Hàm áp dụng sản lượng dự kiến
+        function applyMonthlyOrder(divisor) {
+            if (quantityData.length === 0) {
+                showMessage('Vui lòng load file sản lượng trước!');
+                return;
+            }
+            
+            let updatedCount = 0;
+            
+            medicines.forEach(medicine => {
+                const matchedProduct = quantityData.find(item => 
+                    item.code === medicine.code
+                );
+                
+                if (matchedProduct) {
+                    const monthlyOrder = Math.round(matchedProduct.endQuantity / divisor);
+                    medicine.monthlyOrder = monthlyOrder;
+                    updatedCount++;
+                }
+            });
+            
+            saveMedicinesToFirebase();
+            renderTable();
+            showMessage(`Đã cập nhật SL đặt dự kiến/tháng cho ${updatedCount} sản phẩm (chia ${divisor})`);
+        }
+
+        // Hàm thiết lập các sự kiện
+        function setupEventListeners() {
+            document.getElementById('addRowBtn').addEventListener('click', addNewRow);
+            document.getElementById('saveAllBtn').addEventListener('click', function() {
+                medicines.forEach(med => {
+                    saveRow(med.id);
+                });
+                showMessage('Đã lưu tất cả thông tin thuốc!');
+            });
+            
+            document.getElementById('fileUpload').addEventListener('click', function() {
+                document.getElementById('excelFile').click();
+            });
+            document.getElementById('excelFile').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    importFromExcel(e.target.files[0]);
+                }
+            });
+            
+            document.getElementById('quantityFileUpload').addEventListener('click', function() {
+                document.getElementById('quantityExcelFile').click();
+            });
+            document.getElementById('quantityExcelFile').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    importQuantityFromExcel(e.target.files[0]);
+                }
+            });
+            
+            document.getElementById('loadQuantity2Btn').addEventListener('click', function() {
+                applyMonthlyOrder(2);
+            });
+            document.getElementById('loadQuantity3Btn').addEventListener('click', function() {
+                applyMonthlyOrder(3);
+            });
+            
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                if (searchTerm) {
+                    const filteredData = medicines.filter(med => 
+                        med.name.toLowerCase().includes(searchTerm) || 
+                        med.code.toLowerCase().includes(searchTerm)
+                    );
+                    renderTable(filteredData);
+                } else {
+                    renderTable();
+                }
+            });
+            
+            document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+            document.getElementById('alertBtn').addEventListener('click', function() {
+                const alertConfigModal = new bootstrap.Modal(document.getElementById('alertConfigModal'));
+                alertConfigModal.show();
+            });
+            document.getElementById('saveAlertConfig').addEventListener('click', saveAlertConfig);
+        }
+
+        // Khởi chạy ứng dụng khi trang được tải
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
