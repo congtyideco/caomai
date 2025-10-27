@@ -381,58 +381,104 @@
             display: none;
         }
         
-        /* Responsive cho mobile */
-        @media (max-width: 768px) {
-            .table-responsive {
-                font-size: 11px;
-            }
-            .table th, .table td {
-                padding: 4px 2px;
-            }
-            .btn {
-                font-size: 11px;
-                padding: 4px 6px;
-            }
-            .card-body {
-                padding: 10px;
-            }
-            .header h1 {
-                font-size: 18px;
-            }
-            .header p {
-                font-size: 12px;
-            }
-            .delivery-date-input {
-                min-width: 100px;
-                font-size: 10px;
-            }
-            .expiry-date-input {
-                min-width: 100px;
-                font-size: 10px;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .dashboard-stats {
-                flex-direction: column;
-            }
-            .stat-card {
-                min-width: 100%;
-            }
-            .table td:nth-child(2),
-            .table th:nth-child(2) {
-                max-width: 80px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-            .delivery-date-input {
-                min-width: 90px;
-            }
-            .expiry-date-input {
-                min-width: 90px;
-            }
-        }
+/* Responsive cho mobile */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 11px;
+    }
+    .table th, .table td {
+        padding: 4px 2px;
+    }
+    .btn {
+        font-size: 11px;
+        padding: 4px 6px;
+    }
+    .card-body {
+        padding: 10px;
+    }
+    .header h1 {
+        font-size: 18px;
+    }
+    .header p {
+        font-size: 12px;
+    }
+    .delivery-date-input {
+        min-width: 100px;
+        font-size: 10px;
+    }
+    .expiry-date-input {
+        min-width: 100px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .dashboard-stats {
+        flex-direction: column;
+    }
+    .stat-card {
+        min-width: 100%;
+    }
+    
+    /* Ghi đè CSS cũ và tối ưu cho mobile */
+    .table td:nth-child(3), /* Mã SP */
+    .table th:nth-child(3) {
+        max-width: 60px; /* Giảm chiều rộng Mã SP */
+        width: 60px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .table td:nth-child(4), /* Tên sản phẩm */
+    .table th:nth-child(4) {
+        /* Xóa giới hạn max-width cũ để Tên sản phẩm được rộng tối đa */
+        max-width: 100%; 
+        width: auto;
+        white-space: normal; /* Cho phép xuống dòng nếu cần */
+    }
+    
+    .table td:nth-child(5), /* SL đặt dự kiến/tháng */
+    .table th:nth-child(5) {
+        max-width: 80px; /* Giảm chiều rộng */
+        width: 80px;
+    }
+    
+    .table td:nth-child(6), /* Trạng thái */
+    .table th:nth-child(6) {
+        max-width: 80px; /* Giảm chiều rộng */
+        width: 80px;
+    }
+
+    .table td:nth-child(7), /* Ngày dự kiến giao */
+    .table th:nth-child(7) {
+        max-width: 90px; /* Giảm chiều rộng */
+        width: 90px;
+    }
+
+    .table td:nth-child(8), /* Hạn dụng */
+    .table th:nth-child(8) {
+        max-width: 90px; /* Giảm chiều rộng */
+        width: 90px;
+    }
+
+    .table td:nth-child(9), /* Thao tác */
+    .table th:nth-child(9) {
+        max-width: 50px; /* Giảm chiều rộng */
+        width: 50px;
+    }
+
+    /* Đảm bảo input ngày giao và hạn dụng không quá rộng */
+    .delivery-date-input {
+        min-width: 80px;
+    }
+    .expiry-date-input {
+        min-width: 80px;
+    }
+    .table th {
+        white-space: nowrap; /* Ngăn header bị xuống dòng quá mức */
+    }
+}
         
         /* Compact mode cho bảng */
         .compact-table {
@@ -457,7 +503,7 @@
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h1 class="h4 mb-1"><i class="fas fa-pills me-2"></i>BẢNG CHIA SẼ HOẠT ĐỘNG CUNG ỨNG THUỐC CHO IDECO</h1>
-                    <p class="mb-0 small"> ĐỊNH KỲ HÃY MỞ TÔI RA VÀ CẬP NHẬT TRẠNG THÁI -THẾ LÀ CHUNG TA CỦNG THẤY NHAU ĐÓ CÁC BẠN NHÉ!</p>
+                    <p class="mb-0 small"> Hãy cùng nhau cập nhật -chia sẽ để 2 doanh nghiệp chúng ta bán tốt hơn - thành công hơn với lời cám ơn các bạn Cao Mai</p>
                 </div>
                 <div class="col-md-4 text-end">
                     <div class="btn-group">
@@ -522,7 +568,7 @@
                                 
                                 <!-- Phần import sản lượng -->
                                 <div class="import-section">
-                                    <h6 class="mb-1"><i class="fas fa-chart-line me-1"></i>Sản lượng bán dữ kiến ( file chỉ có Mã - Sản lượng thôi nhé)</h6>
+                                    <h6 class="mb-1"><i class="fas fa-chart-line me-1"></i>Nhập sản lượng dự kiến</h6>
                                     <div class="file-upload mb-1" id="quantityFileUpload">
                                         <i class="fas fa-file-excel fa-lg mb-1 text-success"></i>
                                         <p class="mb-0 small">File Excel sản lượng cuối kỳ</p>
@@ -530,10 +576,10 @@
                                     </div>
                                     <div class="btn-group-vertical">
                                         <button class="btn btn-outline-primary btn-sm" id="loadQuantity2Btn">
-                                            <i class="fas fa-calculator me-1"></i> DL 2 
+                                            <i class="fas fa-calculator me-1"></i> DL 2tháng 
                                         </button>
                                         <button class="btn btn-outline-success btn-sm" id="loadQuantity3Btn">
-                                            <i class="fas fa-calculator me-1"></i> DL 3
+                                            <i class="fas fa-calculator me-1"></i> DL 3tháng
                                         </button>
                                     </div>
                                     <div id="quantityFileInfo" class="text-muted small mt-1"></div>
